@@ -113,6 +113,11 @@ const ExerciseCamera = () => {
         ctx.arc(x, y, 5, 0, 2 * Math.PI);
         ctx.fillStyle = 'red';
         ctx.fill();
+        if (keypoint.name) {
+          ctx.fillStyle = 'white';
+          ctx.font = '12px Arial';
+          ctx.fillText(keypoint.name, x + 8, y + 3);
+        }
       }
     });
   };

@@ -37,7 +37,7 @@ export default function ExerciseList() {
             logout({ returnTo: window.location.origin });
             setTimeout(() => {
               window.location.href = window.location.origin; // Force redirection
-            }, 500);
+            }, 200);
           }}
         >
           Log Out
