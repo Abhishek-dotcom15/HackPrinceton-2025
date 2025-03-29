@@ -1,0 +1,440 @@
+/* General app styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  margin: 0;
+  font-family: 'Roboto', sans-serif;
+  background-color: #101010;
+}
+
+.app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Tab navigation */
+.tab-nav {
+  display: flex;
+  background-color: #1a1a1a;
+  border-bottom: 1px solid #333;
+}
+
+.tab-button {
+  background: none;
+  border: none;
+  padding: 15px 20px;
+  color: #aaa;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.tab-button:hover {
+  background-color: #252525;
+  color: #fff;
+}
+
+.tab-button.active {
+  background-color: #252525;
+  color: #3a97eb;
+  border-bottom: 2px solid #3a97eb;
+}
+
+.content {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+}
+
+/* Split view layout */
+.split-view {
+  width: 50%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.full-view {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Keypoints container */
+.keypoints-container {
+  display: flex;
+  flex-direction: column;
+  background-color: #151515;
+  color: white;
+  position: relative;
+}
+
+.detection-content {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.webcam,
+.detection-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Segmentation container */
+.segmentation-container {
+  display: flex;
+  flex-direction: column;
+  background-color: #151515;
+  color: white;
+  position: relative;
+}
+
+.segmentation-content {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Heading with model selector */
+.heading {
+  padding: 10px 20px;
+  margin: 0;
+  background-color: #252525;
+  font-size: 18px;
+  font-weight: 400;
+  border-bottom: 1px solid #333;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Model selector styling */
+.model-selector {
+  display: flex;
+  gap: 10px;
+}
+
+.model-button {
+  background-color: #333;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 10px;
+  color: #ddd;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.model-button:hover:not(:disabled) {
+  background-color: #444;
+  color: white;
+}
+
+.model-button.active {
+  background-color: #2a5885;
+  color: white;
+}
+
+.model-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Status messages */
+.status-message {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  color: white;
+  font-size: 14px;
+  z-index: 10;
+}
+
+.info-message {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+.warning-message {
+  background-color: rgba(255, 150, 0, 0.8);
+}
+
+.error-message {
+  background-color: rgba(255, 0, 0, 0.8);
+  max-width: 80%;
+}
+
+/* Body Segmentation component */
+.body-segmentation {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  height: 100%;
+  overflow: hidden;
+  background-color: #1a1a1a;
+}
+
+.segmentation-controls {
+  display: flex;
+  padding: 8px;
+  gap: 8px;
+  background-color: #252525;
+  border-top: 1px solid #333;
+  overflow-x: auto;
+}
+
+.segmentation-button {
+  background-color: #333;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 12px;
+  color: #ddd;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.segmentation-button:hover {
+  background-color: #444;
+  color: white;
+}
+
+.segmentation-button.active {
+  background-color: #2a5885;
+  color: white;
+}
+
+.record-button {
+  background-color: #5a3030;
+}
+
+.record-button:hover {
+  background-color: #803030;
+}
+
+.record-button.recording {
+  background-color: #aa3030;
+  animation: pulse 2s infinite;
+}
+
+.export-button {
+  background-color: #305a30;
+}
+
+.export-button:hover {
+  background-color: #307030;
+}
+
+.segmentation-params {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 8px;
+  gap: 16px;
+  background-color: #1e1e1e;
+  border-top: 1px solid #333;
+}
+
+.param-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 200px;
+}
+
+.param-slider label {
+  font-size: 12px;
+  color: #ddd;
+}
+
+.param-slider input[type="range"] {
+  width: 100%;
+}
+
+.param-checkbox {
+  display: flex;
+  align-items: center;
+}
+
+.param-checkbox label {
+  font-size: 12px;
+  color: #ddd;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.segmentation-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  padding: 20px;
+  border-radius: 8px;
+  color: white;
+  text-align: center;
+  z-index: 10;
+}
+
+.segmentation-overlay.loading {
+  min-width: 250px;
+}
+
+.segmentation-overlay.error {
+  background-color: rgba(180, 30, 30, 0.8);
+  min-width: 300px;
+}
+
+.segmentation-shortcuts {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  background-color: rgba(0, 0, 0, 0.7);
+  padding: 8px;
+  border-radius: 4px;
+  color: white;
+  font-size: 11px;
+  max-width: 250px;
+}
+
+.shortcut-title {
+  font-weight: bold;
+  margin-bottom: 5px;
+  color: #4aa7fd;
+}
+
+.shortcut-item {
+  margin-bottom: 3px;
+}
+
+/* Animation for recording button */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 40, 40, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(255, 40, 40, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 40, 40, 0);
+  }
+}
+
+/* About page styles */
+.about-container {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: #151515;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.about-content {
+  padding: 20px;
+  line-height: 1.6;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.about-content h3 {
+  margin-top: 25px;
+  margin-bottom: 10px;
+  color: #4aa7fd;
+}
+
+.about-content p {
+  margin-bottom: 15px;
+}
+
+.about-content ul {
+  margin: 10px 0;
+  padding-left: 25px;
+}
+
+.about-content li {
+  margin-bottom: 8px;
+}
+
+.about-content strong {
+  color: #f0f0f0;
+}
+
+/* Loading overlay */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.8);
+  z-index: 100;
+}
+
+.loading-message {
+  background-color: rgba(30, 30, 30, 0.9);
+  padding: 20px 30px;
+  border-radius: 6px;
+  color: white;
+  font-size: 16px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.error-message {
+  background-color: rgba(150, 30, 30, 0.9);
+  padding: 20px 30px;
+  border-radius: 6px;
+  color: white;
+  font-size: 16px;
+  box-shadow: 0 0 20px rgba(150, 0, 0, 0.5);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .content {
+    flex-direction: column;
+  }
+  
+  .split-view {
+    width: 100%;
+    height: 50%;
+  }
+  
+  .segmentation-controls {
+    flex-wrap: wrap;
+  }
+  
+  .segmentation-button {
+    flex: 1;
+    min-width: 80px;
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+  
+  .segmentation-shortcuts {
+    display: none;
+  }
+}
