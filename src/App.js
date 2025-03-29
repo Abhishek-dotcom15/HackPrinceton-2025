@@ -64,7 +64,18 @@ const App = () => {
   const [modelLoading, setModelLoading] = useState(false);
   const [modelType, setModelType] = useState("movenet");
   const [liveFeedback, setLiveFeedback] = useState("");
-  const [feedbackRequested, setFeedbackRequested] = useState(false);
+  const [cooldownTime, setCooldownTime] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCooldownTime((prev) => Math.max(prev - 1, 0));
+    }, 1000); // decrease by 1 sec every second
+  
+    return () => clearInterval(interval);
+  }, []);
+  
+  // const [feedbackRequested, setFeedbackRequested] = useState(false);
+  const lastFeedbackTimeRef = useRef(Date.now());
+
 
   useEffect(() => {
     const setupTensorflow = async () => {
@@ -183,9 +194,17 @@ const App = () => {
               ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
 
               const keypoints = poses?.[0]?.keypoints;
-              if (modelType === "blazepose" && !feedbackRequested) {
+              if (modelType === "blazepose") {
+                const now = Date.now();
+                const secondsSinceLastFeedback = (now - lastFeedbackTimeRef.current) / 1000;
+              
                 const keypoints3D = poses?.[0]?.keypoints3D;
-                if (keypoints3D) {
+              
+                if (secondsSinceLastFeedback >= 15 && keypoints3D) {
+                  lastFeedbackTimeRef.current = now;
+                  setCooldownTime(15); // reset cooldown to 15 seconds
+
+              
                   const leftKneeAngle = calculateAngle3D(
                     keypoints3D[24],
                     keypoints3D[26],
@@ -196,21 +215,21 @@ const App = () => {
                     keypoints3D[25],
                     keypoints3D[27]
                   );
-
+              
                   const prompt = `
-A user is performing a squat. The knee angles are:
-- Left: ${leftKneeAngle.toFixed(1)}°
-- Right: ${rightKneeAngle.toFixed(1)}°
-
-Provide corrective feedback if form is improper.
-If knees are > 150°, too upright. If < 90°, too deep.
-Else, encourage good form.`;
-
+              A user is performing a squat. The knee angles are:
+              - Left: ${leftKneeAngle.toFixed(1)}°
+              - Right: ${rightKneeAngle.toFixed(1)}°
+              
+              Provide corrective feedback if form is improper.
+              If knees are > 150°, too upright. If < 90°, too deep.
+              Else, encourage good form.`;
+              
                   const feedback = await getGroqFeedback(prompt);
                   setLiveFeedback(feedback);
-                  setFeedbackRequested(true);
                 }
               }
+              
 
               if (keypoints && keypoints.length > 0) {
                 setNoPerson(false);
@@ -244,13 +263,14 @@ Else, encourage good form.`;
         cleanupFn();
       }
     };
-  }, [backendReady, activeTab, modelType, feedbackRequested]);
+  }, [backendReady, activeTab, modelType]);
+  // }, [backendReady, activeTab, modelType, feedbackRequested]);
 
   const handleModelChange = (newModelType) => {
     if (newModelType !== modelType && !modelLoading) {
       setModelType(newModelType);
       setLiveFeedback("");
-      setFeedbackRequested(false);
+      // setFeedbackRequested(false);
     }
   };
 
@@ -310,6 +330,11 @@ Else, encourage good form.`;
               {liveFeedback && (
                 <div className="live-feedback status-message info-message">
                   <strong>Feedback:</strong> {liveFeedback}
+                </div>
+              )}
+              {cooldownTime > 0 && (
+                <div className="status-message info-message">
+                  Next feedback in: {cooldownTime}s
                 </div>
               )}
               {modelLoading && (
