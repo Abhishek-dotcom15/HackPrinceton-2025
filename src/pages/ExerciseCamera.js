@@ -4,20 +4,18 @@ import * as tf from '@tensorflow/tfjs';
 import '@tensorflow/tfjs-backend-webgl';
 import '@tensorflow/tfjs-backend-cpu';
 import * as poseDetection from '@tensorflow-models/pose-detection';
-import Pose3DViewer from '../components/Pose3DViewer'; // Import 3D Viewer
-import ReferenceExerciseView from '../components/ReferenceExerciseView'; // Import Reference View
+import Pose3DViewer from '../components/Pose3DViewer';
 
 const ExerciseCamera = () => {
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
   const [noPerson, setNoPerson] = useState(false);
   const [backendReady, setBackendReady] = useState(false);
-  const [modelType, setModelType] = useState('movenet'); // Default to MoveNet
-  const [keypoints3D, setKeypoints3D] = useState(null); // For 3D Pose Viewer
-  const [darkMode, setDarkMode] = useState(true); // Dark mode toggle
-  const [useSecondaryWebcam, setUseSecondaryWebcam] = useState(false); // Secondary webcam toggle
+  const [modelType, setModelType] = useState('blazepose'); // Default to BlazePose
+  const [keypoints3D, setKeypoints3D] = useState(null);
+  const [darkMode, setDarkMode] = useState(true);
 
-  // TensorFlow.js Backend Setup
+  // Setup backend
   useEffect(() => {
     const setupBackend = async () => {
       try {
@@ -25,7 +23,6 @@ const ExerciseCamera = () => {
         await tf.ready();
         setBackendReady(true);
       } catch (err) {
-        console.warn('WebGL failed, falling back to CPU');
         await tf.setBackend('cpu');
         await tf.ready();
         setBackendReady(true);
@@ -34,14 +31,13 @@ const ExerciseCamera = () => {
     setupBackend();
   }, []);
 
-  // Pose Detection Logic
+  // Pose detection
   useEffect(() => {
     if (!backendReady) return;
 
     const runPoseDetection = async () => {
       let detector;
 
-      // Load the selected model (MoveNet or BlazePose)
       if (modelType === 'blazepose') {
         detector = await poseDetection.createDetector(
           poseDetection.SupportedModels.BlazePose,
@@ -68,14 +64,13 @@ const ExerciseCamera = () => {
           canvasRef.current
         ) {
           const video = webcamRef.current.video;
+          const ctx = canvasRef.current.getContext('2d');
+          canvasRef.current.width = video.videoWidth;
+          canvasRef.current.height = video.videoHeight;
+          ctx.clearRect(0, 0, video.videoWidth, video.videoHeight);
 
           try {
             const poses = await detector.estimatePoses(video);
-            const ctx = canvasRef.current.getContext('2d');
-            canvasRef.current.width = video.videoWidth;
-            canvasRef.current.height = video.videoHeight;
-            ctx.clearRect(0, 0, video.videoWidth, video.videoHeight);
-
             const keypoints = poses?.[0]?.keypoints;
 
             if (modelType === 'blazepose') {
@@ -104,7 +99,6 @@ const ExerciseCamera = () => {
     runPoseDetection();
   }, [backendReady, modelType]);
 
-  // Draw Keypoints
   const drawKeypoints = (keypoints, ctx) => {
     keypoints.forEach((keypoint) => {
       if (keypoint && keypoint.score > 0.5) {
@@ -122,15 +116,14 @@ const ExerciseCamera = () => {
     });
   };
 
-  // Draw Skeleton
   const drawSkeleton = (keypoints, ctx, model) => {
-    const adjacentPairs = poseDetection.util.getAdjacentPairs(
+    const pairs = poseDetection.util.getAdjacentPairs(
       model === 'blazepose'
         ? poseDetection.SupportedModels.BlazePose
         : poseDetection.SupportedModels.MoveNet
     );
 
-    adjacentPairs.forEach(([i, j]) => {
+    pairs.forEach(([i, j]) => {
       const kp1 = keypoints[i];
       const kp2 = keypoints[j];
       if (kp1 && kp2 && kp1.score > 0.5 && kp2.score > 0.5) {
@@ -145,12 +138,32 @@ const ExerciseCamera = () => {
   };
 
   return (
-    <div>
-      <div style={{ marginBottom: '1rem' }}>
-        <button onClick={() => setModelType('movenet')} disabled={modelType === 'movenet'}>
+    <div
+      style={{
+        backgroundColor: darkMode ? '#121212' : '#f5f5f5',
+        color: darkMode ? '#f5f5f5' : '#121212',
+        minHeight: '100vh',
+        padding: '2rem',
+        fontFamily: 'sans-serif'
+      }}
+    >
+      <h2 style={{ textAlign: 'center', marginBottom: '1rem' }}>
+        Real-Time Pose Detection
+      </h2>
+
+      <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+        <button
+          style={{ marginRight: '1rem' }}
+          onClick={() => setModelType('movenet')}
+          disabled={modelType === 'movenet'}
+        >
           Use MoveNet
         </button>
-        <button onClick={() => setModelType('blazepose')} disabled={modelType === 'blazepose'}>
+        <button
+          style={{ marginRight: '1rem' }}
+          onClick={() => setModelType('blazepose')}
+          disabled={modelType === 'blazepose'}
+        >
           Use BlazePose
         </button>
         <button onClick={() => setDarkMode((prev) => !prev)}>
@@ -158,7 +171,14 @@ const ExerciseCamera = () => {
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          justifyContent: 'center',
+          gap: '2rem'
+        }}
+      >
         <div style={{ width: 640, height: 480, position: 'relative' }}>
           <Webcam
             ref={webcamRef}
@@ -166,7 +186,7 @@ const ExerciseCamera = () => {
               width: '100%',
               height: '100%',
               objectFit: 'cover',
-              borderRadius: '8px',
+              borderRadius: '12px'
             }}
             videoConstraints={{ width: 640, height: 480, facingMode: 'user' }}
           />
@@ -179,43 +199,30 @@ const ExerciseCamera = () => {
               width: '100%',
               height: '100%',
               pointerEvents: 'none',
+              borderRadius: '12px'
             }}
           />
         </div>
 
-        <div>
-          <h4>Reference View</h4>
-          <label>
-            <input
-              type="checkbox"
-              checked={useSecondaryWebcam}
-              onChange={() => setUseSecondaryWebcam((prev) => !prev)}
-            />
-            Use webcam
-          </label>
-          <ReferenceExerciseView useWebcam={useSecondaryWebcam} />
-        </div>
+        {modelType === 'blazepose' && keypoints3D && (
+          <div style={{ width: 640, height: 480 }}>
+            <Pose3DViewer keypoints3D={keypoints3D} darkMode={darkMode} />
+          </div>
+        )}
       </div>
-
-      {modelType === 'blazepose' && keypoints3D && (
-        <>
-          <h3 style={{ marginTop: '2rem' }}>3D Pose View</h3>
-          <Pose3DViewer keypoints3D={keypoints3D} darkMode={darkMode} />
-        </>
-      )}
 
       {noPerson && (
         <div
           style={{
             position: 'absolute',
-            top: 10,
-            left: 10,
-            padding: '8px 12px',
-            backgroundColor: 'rgba(0,0,0,0.7)',
+            top: 20,
+            left: 20,
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            padding: '10px 16px',
             color: 'white',
-            borderRadius: 8,
-            fontSize: 16,
+            borderRadius: '8px',
             fontWeight: 'bold',
+            zIndex: 10
           }}
         >
           No person detected
