@@ -64,7 +64,7 @@ const BodySegmentation = ({ videoRef }) => {
         // Updated configuration for MediaPipe SelfieSegmentation model
         // Use GPU acceleration if WebGL is available
         const segmentationConfig = {
-          runtime: backend === 'webgl' ? 'mediapipe-gpu' : 'tfjs',
+          runtime: backend === 'webgl' ? 'mediapipe' : 'tfjs',
           modelType: 'general',
           enableSmoothing: true
         };

@@ -107,6 +107,7 @@ body {
   overflow: hidden;
 }
 
+/* Heading with model selector */
 .heading {
   padding: 10px 20px;
   margin: 0;
@@ -114,6 +115,42 @@ body {
   font-size: 18px;
   font-weight: 400;
   border-bottom: 1px solid #333;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Model selector styling */
+.model-selector {
+  display: flex;
+  gap: 10px;
+}
+
+.model-button {
+  background-color: #333;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 10px;
+  color: #ddd;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.model-button:hover:not(:disabled) {
+  background-color: #444;
+  color: white;
+}
+
+.model-button.active {
+  background-color: #2a5885;
+  color: white;
+}
+
+.model-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Status messages */
