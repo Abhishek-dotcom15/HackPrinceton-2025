@@ -1,6 +1,6 @@
 import axios from "axios";
-
-const GROQ_API_KEY = "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";
+// Access the environment variable
+const GROQ_API_KEY = "your_groq_api_key";
 
 export async function getGroqFeedback(prompt) {
   try {
