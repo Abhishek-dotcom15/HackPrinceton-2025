@@ -1,174 +1,171 @@
-import React, { useRef, useEffect, useState } from 'react';
-import Webcam from 'react-webcam';
-import * as tf from '@tensorflow/tfjs';
-import '@tensorflow/tfjs-core';
-import * as poseDetection from '@tensorflow-models/pose-detection';
-import '@tensorflow/tfjs-backend-webgl';
-import '@tensorflow/tfjs-converter';
-// Make sure CPU backend is available as fallback
-import '@tensorflow/tfjs-backend-cpu';
-// import '@mediapipe/pose'; // Import MediaPipe pose for BlazePose model
-import './App.css';
+import React, { useRef, useEffect, useState } from "react";
+import Webcam from "react-webcam";
+import * as tf from "@tensorflow/tfjs";
+import "@tensorflow/tfjs-core";
+import * as poseDetection from "@tensorflow-models/pose-detection";
+import "@tensorflow/tfjs-backend-webgl";
+import "@tensorflow/tfjs-converter";
+import "@tensorflow/tfjs-backend-cpu";
+import "./App.css";
 
+import { calculateAngle3D } from "./utils/angles";
+import { getGroqFeedback } from "./utils/groq";
+
+// --- moved outside component to prevent eslint warnings ---
+const drawKeypoints = (keypoints, ctx) => {
+  if (!ctx || !keypoints) return;
+  keypoints.forEach((kp) => {
+    if (
+      kp?.score > 0.5 &&
+      typeof kp.x === "number" &&
+      typeof kp.y === "number"
+    ) {
+      ctx.beginPath();
+      ctx.arc(kp.x, kp.y, 5, 0, 2 * Math.PI);
+      ctx.fillStyle = "red";
+      ctx.fill();
+      if (kp.name) {
+        ctx.fillStyle = "white";
+        ctx.font = "12px Arial";
+        ctx.fillText(kp.name, kp.x + 8, kp.y + 3);
+      }
+    }
+  });
+};
+
+const drawSkeleton = (keypoints, ctx, type = "movenet") => {
+  let adjacentPairs = poseDetection.util.getAdjacentPairs(
+    type === "blazepose"
+      ? poseDetection.SupportedModels.BlazePose
+      : poseDetection.SupportedModels.MoveNet
+  );
+  adjacentPairs.forEach(([i, j]) => {
+    const kp1 = keypoints[i];
+    const kp2 = keypoints[j];
+    if (kp1?.score > 0.5 && kp2?.score > 0.5) {
+      ctx.beginPath();
+      ctx.moveTo(kp1.x, kp1.y);
+      ctx.lineTo(kp2.x, kp2.y);
+      ctx.strokeStyle = "lime";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+  });
+};
+
+// --- App Component ---
 const App = () => {
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
   const [noPerson, setNoPerson] = useState(false);
   const [backendReady, setBackendReady] = useState(false);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('keypoints');
-  const [tfReady, setTfReady] = useState(false);
-  const [tfError, setTfError] = useState(null);
+  const [activeTab, setActiveTab] = useState("keypoints");
   const [modelLoading, setModelLoading] = useState(false);
-  const [modelType, setModelType] = useState('movenet'); // 'movenet' or 'blazepose'
+  const [modelType, setModelType] = useState("movenet");
+  const [liveFeedback, setLiveFeedback] = useState("");
+  const [feedbackRequested, setFeedbackRequested] = useState(false);
 
   useEffect(() => {
     const setupTensorflow = async () => {
       try {
-        // Try to initialize TensorFlow.js with WebGL backend for better performance
-        console.log('Initializing TensorFlow.js...');
-        
-        // Make sure we have all backends registered
-        await tf.setBackend('webgl');
-        console.log('WebGL backend selected');
-        
+        await tf.setBackend("webgl");
+        console.log("WebGL backend selected");
         await tf.ready();
-        const backend = tf.getBackend();
-        console.log(`TensorFlow.js initialized with backend: ${backend}`);
-        setTfReady(true);
+        console.log(
+          `TensorFlow.js initialized with backend: ${tf.getBackend()}`
+        );
       } catch (error) {
-        console.error('Failed to initialize TensorFlow.js with WebGL:', error);
-        
-        // Try CPU backend as fallback
+        console.error("WebGL init failed:", error);
         try {
-          await tf.setBackend('cpu');
+          await tf.setBackend("cpu");
           await tf.ready();
-          console.log('TensorFlow.js initialized with CPU backend (fallback)');
-          setTfReady(true);
+          console.log("CPU fallback initialized");
         } catch (cpuError) {
-          console.error('Failed to initialize TensorFlow.js with CPU:', cpuError);
-          setTfError(`TensorFlow.js initialization failed: ${error.message}. CPU fallback also failed.`);
+          setError("Failed to initialize TensorFlow. Try another browser.");
         }
       }
     };
-    
     setupTensorflow();
   }, []);
 
   useEffect(() => {
     const setupBackend = async () => {
       try {
-        // Try WebGL first (preferred for performance)
+        await tf.setBackend("webgl");
+        console.log("Using WebGL backend:", tf.getBackend());
+        setBackendReady(true);
+      } catch (webglError) {
+        console.warn("WebGL failed, falling back to CPU:", webglError);
         try {
-          await tf.setBackend('webgl');
-          console.log('Using WebGL backend:', tf.getBackend());
+          await tf.setBackend("cpu");
+          console.log("Using CPU backend:", tf.getBackend());
           setBackendReady(true);
-        } catch (webglError) {
-          console.warn('WebGL backend failed, trying CPU fallback:', webglError);
-          
-          // If WebGL fails, try CPU backend
-          try {
-            await tf.setBackend('cpu');
-            console.log('Using CPU backend:', tf.getBackend());
-            setBackendReady(true);
-          } catch (cpuError) {
-            throw new Error('Both WebGL and CPU backends failed to initialize');
-          }
+        } catch (cpuError) {
+          setError("Failed to initialize backend. Try a different browser.");
         }
-      } catch (err) {
-        console.error('Error setting up TensorFlow backend:', err);
-        setError('Failed to initialize TensorFlow backend. Please make sure your browser supports WebGL or try a different browser.');
       }
     };
-    
     setupBackend();
   }, []);
 
   useEffect(() => {
     if (!backendReady) return;
-    
     const runPoseDetection = async () => {
       try {
         setModelLoading(true);
-        setError(null); // Clear any previous errors
-        
-        // Get current backend
+        setError(null);
         const currentBackend = tf.getBackend();
-        console.log(`Running pose detection with ${modelType} model on ${currentBackend} backend`);
-        
-        // Adjust settings based on backend
-        const isCpuBackend = currentBackend === 'cpu';
-        
-        // Create model based on selected type
+        const isCpuBackend = currentBackend === "cpu";
         let detector;
-        
-        try {
-          if (modelType === 'blazepose') {
-            // BlazePose model with full configuration
-            // Make sure WebGL backend is used for BlazePose
-            if (isCpuBackend) {
-              await tf.setBackend('webgl');
-              console.log('Switched to WebGL for BlazePose');
-            }
-            
-            // Use tfjs runtime instead of mediapipe to avoid initialization issues
-            const detectorConfig = {
-              runtime: 'mediapipe',
-              modelType: 'full',
-              enableSmoothing: true,
-              solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/pose',
 
+        try {
+          if (modelType === "blazepose") {
+            if (isCpuBackend) await tf.setBackend("webgl");
+            const detectorConfig = {
+              runtime: "mediapipe",
+              modelType: "full",
+              enableSmoothing: true,
+              solutionPath: "https://cdn.jsdelivr.net/npm/@mediapipe/pose",
             };
-            
             detector = await poseDetection.createDetector(
               poseDetection.SupportedModels.BlazePose,
               detectorConfig
             );
-            console.log(`BlazePose model loaded with ${detectorConfig.runtime} runtime`);
+            console.log("BlazePose model loaded");
           } else {
-            // Default to MoveNet model
             detector = await poseDetection.createDetector(
               poseDetection.SupportedModels.MoveNet,
               {
                 modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
-                
               }
             );
-            console.log('MoveNet model loaded');
+            console.log("MoveNet model loaded");
           }
         } catch (modelError) {
-          console.error('Error creating detector:', modelError);
-          setError(`Failed to initialize ${modelType} model: ${modelError.message}`);
-          // Fallback to MoveNet if BlazePose fails
-          if (modelType === 'blazepose') {
-            console.log('Falling back to MoveNet...');
-            setModelType('movenet');
-            detector = await poseDetection.createDetector(
-              poseDetection.SupportedModels.MoveNet,
-              {
-                modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
-              }
-            );
-            console.log('Fallback to MoveNet successful');
+          console.error("Error creating detector:", modelError);
+          setError(
+            `Failed to initialize ${modelType} model: ${modelError.message}`
+          );
+          if (modelType === "blazepose") {
+            setModelType("movenet");
           } else {
-            throw modelError; // Re-throw if MoveNet also fails
+            throw modelError;
           }
         }
-        
-        setModelLoading(false);
 
+        setModelLoading(false);
         let lastFrameTime = 0;
-        const frameInterval = isCpuBackend ? 200 : 0; // 5 FPS for CPU, full speed for GPU
-        
+        const frameInterval = isCpuBackend ? 200 : 0;
+
         const detectPose = async (timestamp) => {
-          // Throttle frame rate for CPU backend
           if (timestamp - lastFrameTime < frameInterval) {
             requestAnimationFrame(detectPose);
             return;
           }
-          
+
           lastFrameTime = timestamp;
-          
+
           if (
             webcamRef.current &&
             webcamRef.current.video &&
@@ -176,58 +173,54 @@ const App = () => {
             canvasRef.current
           ) {
             const video = webcamRef.current.video;
-            
             try {
               const poses = await detector.estimatePoses(video);
+              const ctx = canvasRef.current.getContext("2d");
+              if (!ctx) return requestAnimationFrame(detectPose);
 
-              
-
-              const ctx = canvasRef.current.getContext('2d');
-              if (!ctx) {
-                console.error('Failed to get canvas context');
-                requestAnimationFrame(detectPose);
-                return;
-              }
-              
               canvasRef.current.width = video.videoWidth;
               canvasRef.current.height = video.videoHeight;
-
-              // Draw video background first for reference
               ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
 
               const keypoints = poses?.[0]?.keypoints;
+              if (modelType === "blazepose" && !feedbackRequested) {
+                const keypoints3D = poses?.[0]?.keypoints3D;
+                if (keypoints3D) {
+                  const leftKneeAngle = calculateAngle3D(
+                    keypoints3D[24],
+                    keypoints3D[26],
+                    keypoints3D[28]
+                  );
+                  const rightKneeAngle = calculateAngle3D(
+                    keypoints3D[23],
+                    keypoints3D[25],
+                    keypoints3D[27]
+                  );
 
-              if (modelType === 'blazepose') {
-                console.log('Enabling 3D keypoint logging for BlazePose');
+                  const prompt = `
+A user is performing a squat. The knee angles are:
+- Left: ${leftKneeAngle.toFixed(1)}°
+- Right: ${rightKneeAngle.toFixed(1)}°
 
-                try {
-                  const keypoints3D = poses?.[0]?.keypoints3D;
+Provide corrective feedback if form is improper.
+If knees are > 150°, too upright. If < 90°, too deep.
+Else, encourage good form.`;
 
-                  if (keypoints3D) {
-                    console.log(keypoints3D);
-                  } else {
-                    console.log('3D keypoints not present in poses');
-                  }
-                } catch (error) {
-                  console.error('Error in 3D keypoint logging:', error);
+                  const feedback = await getGroqFeedback(prompt);
+                  setLiveFeedback(feedback);
+                  setFeedbackRequested(true);
                 }
               }
 
-              
-
-              
-              
-
               if (keypoints && keypoints.length > 0) {
-                setNoPerson(false); // person found
+                setNoPerson(false);
                 drawKeypoints(keypoints, ctx);
                 drawSkeleton(keypoints, ctx, modelType);
               } else {
-                setNoPerson(true); // no person detected
+                setNoPerson(true);
               }
             } catch (error) {
-              console.error('Error in pose estimation:', error);
-              // Don't set error state here to prevent continuous errors
+              console.error("Pose estimation error:", error);
             }
           }
 
@@ -235,171 +228,106 @@ const App = () => {
         };
 
         requestAnimationFrame(detectPose);
-        
-        return () => {
-          // No explicit way to cancel detection, but we can let it finish
-          if (detector && typeof detector.dispose === 'function') {
-            try {
-              detector.dispose();
-            } catch (disposeError) {
-              console.error('Error disposing detector:', disposeError);
-            }
-          }
-        };
+        return () => detector?.dispose?.();
       } catch (err) {
-        console.error('Error in pose detection:', err);
-        setError(`Failed to start pose detection: ${err.message}`);
+        console.error("Pose detection error:", err);
+        setError(`Failed to start detection: ${err.message}`);
         setModelLoading(false);
       }
     };
 
     const cleanupFn = runPoseDetection();
     return () => {
-      if (cleanupFn && typeof cleanupFn.then === 'function') {
-        cleanupFn.catch(err => console.error('Error during cleanup:', err));
-      } else if (typeof cleanupFn === 'function') {
+      if (typeof cleanupFn?.then === "function") {
+        cleanupFn.catch((err) => console.error("Cleanup error:", err));
+      } else if (typeof cleanupFn === "function") {
         cleanupFn();
       }
     };
-  }, [backendReady, activeTab, modelType]);
-
-  const drawKeypoints = (keypoints, ctx) => {
-    if (!ctx || !keypoints || !Array.isArray(keypoints)) return;
-    
-    keypoints.forEach((keypoint) => {
-      if (keypoint && keypoint.score > 0.5) {
-        const { x, y } = keypoint;
-        if (typeof x !== 'number' || typeof y !== 'number') return;
-        
-        ctx.beginPath();
-        ctx.arc(x, y, 5, 0, 2 * Math.PI);
-        ctx.fillStyle = 'red';
-        ctx.fill();
-        
-        // Draw keypoint name
-        if (keypoint.name) {
-          ctx.fillStyle = 'white';
-          ctx.font = '12px Arial';
-          ctx.fillText(keypoint.name, x + 8, y + 3);
-        }
-      }
-    });
-  };
-
-  const drawSkeleton = (keypoints, ctx, type = 'movenet') => {
-    if (!ctx || !keypoints || !Array.isArray(keypoints)) return;
-    
-    try {
-      // Get the appropriate adjacent pairs based on model type
-      let adjacentPairs;
-      try {
-        adjacentPairs = type === 'blazepose' 
-          ? poseDetection.util.getAdjacentPairs(poseDetection.SupportedModels.BlazePose)
-          : poseDetection.util.getAdjacentPairs(poseDetection.SupportedModels.MoveNet);
-      } catch (error) {
-        console.error('Error getting adjacent pairs:', error);
-        // Fallback to MoveNet connection pattern
-        adjacentPairs = poseDetection.util.getAdjacentPairs(poseDetection.SupportedModels.MoveNet);
-      }
-
-      adjacentPairs.forEach(([i, j]) => {
-        const kp1 = keypoints[i];
-        const kp2 = keypoints[j];
-
-        if (kp1 && kp2 && kp1.score > 0.5 && kp2.score > 0.5) {
-          ctx.beginPath();
-          ctx.moveTo(kp1.x, kp1.y);
-          ctx.lineTo(kp2.x, kp2.y);
-          ctx.strokeStyle = 'lime';
-          ctx.lineWidth = 2;
-          ctx.stroke();
-        }
-      });
-    } catch (error) {
-      console.error('Error drawing skeleton:', error);
-    }
-  };
+  }, [backendReady, activeTab, modelType, feedbackRequested]);
 
   const handleModelChange = (newModelType) => {
     if (newModelType !== modelType && !modelLoading) {
-      console.log(`Switching model from ${modelType} to ${newModelType}`);
       setModelType(newModelType);
+      setLiveFeedback("");
+      setFeedbackRequested(false);
     }
   };
 
   return (
     <div className="app">
       <div className="tab-nav">
-        <button 
-          className={`tab-button ${activeTab === 'keypoints' ? 'active' : ''}`}
-          onClick={() => setActiveTab('keypoints')}
+        <button
+          className={`tab-button ${activeTab === "keypoints" ? "active" : ""}`}
+          onClick={() => setActiveTab("keypoints")}
         >
           2D Keypoints
         </button>
-        <button 
-          className={`tab-button ${activeTab === 'about' ? 'active' : ''}`}
-          onClick={() => setActiveTab('about')}
+        <button
+          className={`tab-button ${activeTab === "about" ? "active" : ""}`}
+          onClick={() => setActiveTab("about")}
         >
           About
         </button>
       </div>
-      
       <div className="content">
-        {activeTab === 'keypoints' && (
+        {activeTab === "keypoints" && (
           <div className="keypoints-container full-view">
             <h2 className="heading">
               2D Keypoint Detection
               <div className="model-selector">
-                <button 
-                  className={`model-button ${modelType === 'movenet' ? 'active' : ''}`} 
-                  onClick={() => handleModelChange('movenet')}
+                <button
+                  className={`model-button ${
+                    modelType === "movenet" ? "active" : ""
+                  }`}
+                  onClick={() => handleModelChange("movenet")}
                   disabled={modelLoading}
                 >
                   MoveNet
                 </button>
-                <button 
-                  className={`model-button ${modelType === 'blazepose' ? 'active' : ''}`} 
-                  onClick={() => handleModelChange('blazepose')}
+                <button
+                  className={`model-button ${
+                    modelType === "blazepose" ? "active" : ""
+                  }`}
+                  onClick={() => handleModelChange("blazepose")}
                   disabled={modelLoading}
                 >
                   BlazePose
                 </button>
               </div>
             </h2>
-            
             <div className="detection-content">
               <Webcam
                 ref={webcamRef}
                 className="webcam"
                 videoConstraints={{
-                  width: 640,
-                  height: 480,
-                  facingMode: "user"
+                  width: { ideal: 1280 },
+                  height: { ideal: 720 },
+                  facingMode: "user",
                 }}
               />
-              <canvas
-                ref={canvasRef}
-                className="detection-canvas"
-              />
-              
-              {modelLoading && (
-                <div className="status-message info-message">
-                  Loading {modelType === 'blazepose' ? 'BlazePose' : 'MoveNet'} model...
+              <canvas ref={canvasRef} className="detection-canvas" />
+              {liveFeedback && (
+                <div className="live-feedback status-message info-message">
+                  <strong>Feedback:</strong> {liveFeedback}
                 </div>
               )}
-              
+              {modelLoading && (
+                <div className="status-message info-message">
+                  Loading {modelType === "blazepose" ? "BlazePose" : "MoveNet"}{" "}
+                  model...
+                </div>
+              )}
               {noPerson && (
                 <div className="status-message warning-message">
                   No person detected
                 </div>
               )}
-              
               {error && (
                 <div className="status-message error-message">
                   Error: {error}
                 </div>
               )}
-              
               {!backendReady && !error && (
                 <div className="status-message info-message">
                   Initializing TensorFlow.js...
@@ -408,37 +336,26 @@ const App = () => {
             </div>
           </div>
         )}
-        
-        {activeTab === 'about' && (
+        {activeTab === "about" && (
           <div className="about-container">
             <h2 className="heading">About Computer Vision Features</h2>
             <div className="about-content">
               <p>
-                This application demonstrates real-time computer vision capabilities in the browser.
+                This app shows real-time pose detection using TensorFlow.js.
               </p>
-              <h3>Features:</h3>
               <ul>
-                <li><strong>2D Keypoint Detection</strong> - Track human pose skeleton points in real-time with multiple models:</li>
-                <ul>
-                  <li><strong>MoveNet</strong> - Lightweight and fast pose detection model</li>
-                  <li><strong>BlazePose</strong> - MediaPipe's more accurate pose tracking model with 33 keypoints</li>
-                </ul>
+                <li>
+                  <strong>MoveNet:</strong> Lightweight, fast model
+                </li>
+                <li>
+                  <strong>BlazePose:</strong> More accurate, 33 keypoints
+                </li>
               </ul>
               <p>
-                Powered by TensorFlow.js and MediaPipe models, providing high-performance computer vision
-                capabilities without requiring any server processing.
-              </p>
-              <h3>Privacy:</h3>
-              <p>
-                All processing happens locally in your browser. No video data is sent to any server.
+                All processing is local in your browser—no video is sent to a
+                server.
               </p>
             </div>
-          </div>
-        )}
-        
-        {!tfReady && tfError && (
-          <div className="loading-overlay">
-            <div className="error-message">{tfError}</div>
           </div>
         )}
       </div>
