@@ -1,6 +1,6 @@
-// pages/ExerciseList.js
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth0 } from '@auth0/auth0-react';
 
 const exercises = [
   { name: 'Bird Dog', image: '🦅', description: 'Core + balance' },
@@ -10,6 +10,7 @@ const exercises = [
 
 export default function ExerciseList() {
   const navigate = useNavigate();
+  const { logout } = useAuth0(); // Import logout function from Auth0
 
   return (
     <div style={styles.container}>
@@ -26,6 +27,21 @@ export default function ExerciseList() {
             <p>{ex.description}</p>
           </div>
         ))}
+      </div>
+      {/* Logout Button */}
+      <div style={styles.logoutSection}>
+        <button
+          style={styles.logoutButton}
+          onClick={() => {
+            console.log('Logging out...');
+            logout({ returnTo: window.location.origin });
+            setTimeout(() => {
+              window.location.href = window.location.origin; // Force redirection
+            }, 500);
+          }}
+        >
+          Log Out
+        </button>
       </div>
     </div>
   );
@@ -53,5 +69,17 @@ const styles = {
   },
   icon: {
     fontSize: '2.5rem',
-  }
+  },
+  logoutSection: {
+    marginTop: '20px',
+  },
+  logoutButton: {
+    padding: '8px 16px',
+    fontSize: '0.9rem',
+    borderRadius: '6px',
+    border: 'none',
+    backgroundColor: '#f44336',
+    color: 'white',
+    cursor: 'pointer',
+  },
 };
