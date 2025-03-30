@@ -1352,6 +1352,11 @@ const App = () => {
                   Next feedback in: {cooldownTime}s
                 </div>
               )}
+              {cooldownTime > 0 && (
+                <div className="status-message info-message">
+                  Next feedback in: {cooldownTime}s
+                </div>
+              )}
               {modelLoading && (
                 <div className="status-message info-message">
                   Loading BlazePose model...
