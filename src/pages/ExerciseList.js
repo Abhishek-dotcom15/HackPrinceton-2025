@@ -3,14 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 
 const exercises = [
-  { name: 'Bird Dog', image: '🦅', description: 'Core + balance' },
-  { name: 'Plank', image: '🪵', description: 'Core + shoulders' },
-  { name: 'Bridge', image: '🌉', description: 'Glutes + hamstrings' },
+  { name: 'Squat', image: '🏋️‍♂️', description: 'Legs + glutes' },
+  { name: 'Lunge', image: '🦵', description: 'Quads + balance' },
+  { name: 'Leg Raise', image: '🪜', description: 'Core + hip flexors' },
+  { name: 'Leg Extension', image: '🦿', description: 'Quads' },
+  { name: 'Hamstring Curl', image: '🏃‍♂️', description: 'Hamstrings' },
 ];
 
 export default function ExerciseList() {
   const navigate = useNavigate();
-  const { logout } = useAuth0(); // Import logout function from Auth0
+  const { logout } = useAuth0();
 
   return (
     <div style={styles.container}>
@@ -20,7 +22,7 @@ export default function ExerciseList() {
           <div
             key={ex.name}
             style={styles.card}
-            onClick={() => navigate(`/exercise/${ex.name.toLowerCase()}`)}
+            onClick={() => navigate(`/exercise/${ex.name.toLowerCase().replace(/\s+/g, '')}`)}
           >
             <div style={styles.icon}>{ex.image}</div>
             <h3>{ex.name}</h3>
@@ -28,7 +30,7 @@ export default function ExerciseList() {
           </div>
         ))}
       </div>
-      {/* Logout Button */}
+
       <div style={styles.logoutSection}>
         <button
           style={styles.logoutButton}
@@ -36,7 +38,7 @@ export default function ExerciseList() {
             console.log('Logging out...');
             logout({ returnTo: window.location.origin });
             setTimeout(() => {
-              window.location.href = window.location.origin; // Force redirection
+              window.location.href = window.location.origin;
             }, 200);
           }}
         >

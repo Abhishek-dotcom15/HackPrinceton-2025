@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Webcam from 'react-webcam';
 import * as tf from '@tensorflow/tfjs';
 import '@tensorflow/tfjs-backend-webgl';
@@ -10,6 +11,8 @@ import FeedbackEngine from '../components/FeedbackEngine';
 const ExerciseCamera = () => {
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
+  const navigate = useNavigate();
+
   const [noPerson, setNoPerson] = useState(false);
   const [backendReady, setBackendReady] = useState(false);
   const [modelType, setModelType] = useState('blazepose');
@@ -150,6 +153,22 @@ const ExerciseCamera = () => {
         fontFamily: 'sans-serif',
       }}
     >
+      {/* BACK BUTTON */}
+      <button
+        onClick={() => navigate('/exercises')}
+        style={{
+          marginBottom: '1rem',
+          padding: '8px 16px',
+          backgroundColor: '#444',
+          color: 'white',
+          border: 'none',
+          borderRadius: '6px',
+          cursor: 'pointer',
+        }}
+      >
+        ← Back to Exercises
+      </button>
+
       <h2 style={{ textAlign: 'center', marginBottom: '1rem' }}>
         Real-Time Pose Detection
       </h2>
