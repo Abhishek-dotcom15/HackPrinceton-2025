@@ -121,3 +121,6 @@ Each exercise type has specific criteria for posture correction and form.
 - **Pose detection issues**: Ensure that TensorFlow.js has successfully initialized the backend (WebGL or CPU).
 
 - **Feedback not showing**: Ensure that keypoints are being detected and that feedback is being generated every 15 seconds.
+
+
+[https://youtu.be/5RaJ6HMRXPQ](https://youtu.be/5RaJ6HMRXPQ)
