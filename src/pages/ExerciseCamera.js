@@ -167,9 +167,13 @@ const ExerciseCamera = () => {
                 drawSkeleton(keypoints, ctx);
 
                 // Add the new frame to the queue
+<<<<<<< HEAD
                 // const newFrame = { keypoints3D, timestamp };
                 const newFrame = { keypoints3D: kp3d, timestamp };
 
+=======
+                const newFrame = { keypoints3D: kp3d, timestamp };
+>>>>>>> ab4e153 (Prompts)
                 frameQueueRef.current.push(newFrame);
 
                 // Remove frames older than 10 seconds
