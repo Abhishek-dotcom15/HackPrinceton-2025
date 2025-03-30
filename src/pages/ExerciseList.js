@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 
 const exercises = [
-  { name: 'Squat', image: '🏋️‍♂️', description: 'Legs + glutes' },
-  { name: 'Lunge', image: '🦵', description: 'Quads + balance' },
-  { name: 'Leg Raise', image: '🪜', description: 'Core + hip flexors' },
-  { name: 'Leg Extension', image: '🦿', description: 'Quads' },
-  { name: 'Hamstring Curl', image: '🏃‍♂️', description: 'Hamstrings' },
+  { name: 'Squat', image: '🏋️‍♂️', value:'squat', description: 'Legs + glutes' },
+  { name: 'Lunge', image: '🦵', value:'lunge', description: 'Quads + balance' },
+  { name: 'Leg Raise', image: '🪜',value:'legRaise', description: 'Core + hip flexors' },
+  { name: 'Leg Extension', image: '🦿', value:'legExtension',description: 'Quads' },
+  { name: 'Hamstring Curl', image: '🏃‍♂️', value:'hamstringCurl',description: 'Hamstrings' },
 ];
 
 export default function ExerciseList() {
@@ -22,7 +22,7 @@ export default function ExerciseList() {
           <div
             key={ex.name}
             style={styles.card}
-            onClick={() => navigate(`/exercise/${ex.name.toLowerCase().replace(/\s+/g, '')}`)}
+            onClick={() => navigate(`/exercise/${ex.value}`)}
           >
             <div style={styles.icon}>{ex.image}</div>
             <h3>{ex.name}</h3>

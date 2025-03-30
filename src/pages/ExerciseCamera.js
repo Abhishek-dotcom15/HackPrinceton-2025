@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import Webcam from 'react-webcam';
 import * as tf from '@tensorflow/tfjs';
 import '@tensorflow/tfjs-backend-webgl';
@@ -19,91 +19,217 @@ const ExerciseCamera = () => {
   const [keypoints3D, setKeypoints3D] = useState(null);
   const [darkMode, setDarkMode] = useState(true);
   const [liveFeedback, setLiveFeedback] = useState('');
+  const [error, setError] = useState(null);
+  // const [activeTab, setActiveTab] = useState('keypoints');
+  const [modelLoading, setModelLoading] = useState(false);
+  const [cooldownTime, setCooldownTime] = useState(0);
+  
+  const [frames, setFrames] = useState([]); // Store frames for feedback calculation
+  const lastFeedbackTimeRef = useRef(Date.now());
+  const frameQueueRef = useRef([]); // Queue to store frames (keypoints3D and timestamp)
 
-  // Setup backend
+  const { name } = useParams();  // This will extract the 'name' parameter from the URL
+  const [exerciseType, setExerciseType] = useState(name);  // Initialize exerciseType with the dynamic 'name'
+  const [feedbackRendered, setFeedbackRendered] = useState(false); // Track feedback rendering
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCooldownTime((prev) => Math.max(prev - 1, 0));
+    }, 1000); // decrease by 1 sec every second
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Setup TensorFlow
+  useEffect(() => {
+    const setupTensorflow = async () => {
+      try {
+        await tf.setBackend('webgl');
+        console.log('WebGL backend selected');
+        await tf.ready();
+        console.log(`TensorFlow.js initialized with backend: ${tf.getBackend()}`);
+      } catch (error) {
+        console.error('WebGL init failed:', error);
+        try {
+          await tf.setBackend('cpu');
+          await tf.ready();
+          console.log('CPU fallback initialized');
+        } catch (cpuError) {
+          setError('Failed to initialize TensorFlow. Try another browser.');
+        }
+      }
+    };
+    setupTensorflow();
+  }, []);
+
+  useEffect(() => {
+    // Update exerciseType when 'name' changes (if the user navigates to another exercise)
+    setExerciseType(name);
+  }, [name]);  // Listen for changes to 'name' in the URL
+
+  // Setup Backend
   useEffect(() => {
     const setupBackend = async () => {
       try {
         await tf.setBackend('webgl');
-        await tf.ready();
+        console.log('Using WebGL backend:', tf.getBackend());
         setBackendReady(true);
-      } catch (err) {
-        await tf.setBackend('cpu');
-        await tf.ready();
-        setBackendReady(true);
+      } catch (webglError) {
+        console.warn('WebGL failed, falling back to CPU:', webglError);
+        try {
+          await tf.setBackend('cpu');
+          console.log('Using CPU backend:', tf.getBackend());
+          setBackendReady(true);
+        } catch (cpuError) {
+          setError('Failed to initialize backend. Try a different browser.');
+        }
       }
     };
     setupBackend();
   }, []);
 
-  // Pose detection
+  // Run Pose Detection
   useEffect(() => {
+
+     
+    
     if (!backendReady) return;
 
+    
     const runPoseDetection = async () => {
-      let detector;
+      try {
+        setModelLoading(true);
+        setError(null);
+        let detector;
 
-      if (modelType === 'blazepose') {
-        detector = await poseDetection.createDetector(
-          poseDetection.SupportedModels.BlazePose,
-          {
+        try {
+          // Only BlazePose will be used now
+          const detectorConfig = {
             runtime: 'mediapipe',
             modelType: 'full',
             enableSmoothing: true,
             solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/pose',
-          }
-        );
-      } else {
-        detector = await poseDetection.createDetector(
-          poseDetection.SupportedModels.MoveNet,
-          {
-            modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
-          }
-        );
-      }
-
-      const detectPose = async () => {
-        if (
-          webcamRef.current &&
-          webcamRef.current.video.readyState === 4 &&
-          canvasRef.current
-        ) {
-          const video = webcamRef.current.video;
-          const ctx = canvasRef.current.getContext('2d');
-          canvasRef.current.width = video.videoWidth;
-          canvasRef.current.height = video.videoHeight;
-          ctx.clearRect(0, 0, video.videoWidth, video.videoHeight);
-
-          try {
-            const poses = await detector.estimatePoses(video);
-            const keypoints = poses?.[0]?.keypoints;
-
-            if (modelType === 'blazepose') {
-              const kp3d = poses?.[0]?.keypoints3D;
-              setKeypoints3D(kp3d || null);
-            }
-
-            if (keypoints && keypoints.length > 0) {
-              setNoPerson(false);
-              drawKeypoints(keypoints, ctx);
-              drawSkeleton(keypoints, ctx, modelType);
-            } else {
-              setNoPerson(true);
-              setKeypoints3D(null);
-            }
-          } catch (err) {
-            console.error('Pose estimation error:', err);
-          }
+          };
+          detector = await poseDetection.createDetector(
+            poseDetection.SupportedModels.BlazePose,
+            detectorConfig
+          );
+          console.log('BlazePose model loaded');
+        } catch (modelError) {
+          console.error('Error creating detector:', modelError);
+          setError(
+            `Failed to initialize BlazePose model: ${modelError.message}`
+          );
+          setModelLoading(false);
+          return;
         }
 
-        requestAnimationFrame(detectPose);
-      };
+        setModelLoading(false);
+        let lastFrameTime = 0;
+        const frameInterval = 200;
 
-      detectPose();
+        // Pose Detection Logic
+        const detectPose = async (timestamp) => {
+          if (timestamp - lastFrameTime < frameInterval) {
+            requestAnimationFrame(detectPose);
+            return;
+          }
+
+          lastFrameTime = timestamp;
+
+          if (
+            webcamRef.current &&
+            webcamRef.current.video &&
+            webcamRef.current.video.readyState === 4 &&
+            canvasRef.current
+          ) {
+            const video = webcamRef.current.video;
+            try {
+              const poses = await detector.estimatePoses(video);
+              const ctx = canvasRef.current.getContext('2d');
+              if (!ctx) return requestAnimationFrame(detectPose);
+
+              canvasRef.current.width = video.videoWidth;
+              canvasRef.current.height = video.videoHeight;
+              ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+
+              const keypoints = poses?.[0]?.keypoints;
+              const kp3d = poses?.[0]?.keypoints3D;
+              setKeypoints3D(kp3d || null);
+
+
+
+
+              if (keypoints && keypoints.length > 0) {
+                setNoPerson(false);
+
+                drawKeypoints(keypoints, ctx);
+                drawSkeleton(keypoints, ctx);
+
+                // Add the new frame to the queue
+                const newFrame = { keypoints3D, timestamp };
+                frameQueueRef.current.push(newFrame);
+
+                // Remove frames older than 10 seconds
+                while (frameQueueRef.current.length > 0 && timestamp - frameQueueRef.current[0].timestamp > 10000) {
+                  frameQueueRef.current.shift();
+                }
+
+                // Update the state with the latest frames
+                setFrames([...frameQueueRef.current]);
+
+                // Handle feedback every 15 seconds if there are at least 10 frames
+                const now = Date.now();
+                const secondsSinceLast = (now - lastFeedbackTimeRef.current) / 1000;
+
+                // Log keypoints3D and frames to check their values
+                console.log("Keypoints 3D:", keypoints3D);
+                console.log("Frames:", frames);
+            
+
+                if (secondsSinceLast >= 15 && keypoints3D && frames.length >= 10) {
+                  lastFeedbackTimeRef.current = now;
+                  setCooldownTime(15);
+
+                  // Trigger feedback rendering and reset frames after feedback
+                  setFeedbackRendered(false); // Reset the feedbackRendered flag before rendering feedback
+                }
+              } else {
+                setNoPerson(true);
+              }
+            } catch (error) {
+              console.error('Pose estimation error:', error);
+            }
+          }
+
+          requestAnimationFrame(detectPose);
+        };
+
+        requestAnimationFrame(detectPose);
+        return () => detector?.dispose?.();
+      } catch (err) {
+        console.error('Pose detection error:', err);
+        setError(`Failed to start detection: ${err.message}`);
+        setModelLoading(false);
+      }
     };
 
-    runPoseDetection();
-  }, [backendReady, modelType]);
+    const cleanupFn = runPoseDetection();
+    return () => {
+      if (typeof cleanupFn?.then === 'function') {
+        cleanupFn.catch((err) => console.error('Cleanup error:', err));
+      } else if (typeof cleanupFn === 'function') {
+        cleanupFn();
+      }
+    };
+  }, [backendReady, exerciseType]);
+
+  // Trigger reset after feedback is rendered
+  useEffect(() => {
+    if (feedbackRendered && keypoints3D && frames.length >= 10) {
+      setFrames([]); // Reset the frames
+    }
+  }, [feedbackRendered, keypoints3D, frames]);
 
   const drawKeypoints = (keypoints, ctx) => {
     keypoints.forEach((keypoint) => {
@@ -122,21 +248,22 @@ const ExerciseCamera = () => {
     });
   };
 
-  const drawSkeleton = (keypoints, ctx, model) => {
+  const drawSkeleton = (keypoints, ctx) => {
     const pairs = poseDetection.util.getAdjacentPairs(
-      model === 'blazepose'
-        ? poseDetection.SupportedModels.BlazePose
-        : poseDetection.SupportedModels.MoveNet
+      
+        poseDetection.SupportedModels.BlazePose
+        
     );
 
     pairs.forEach(([i, j]) => {
       const kp1 = keypoints[i];
       const kp2 = keypoints[j];
-      if (kp1 && kp2 && kp1.score > 0.5 && kp2.score > 0.5) {
+      
+      if (kp1?.score > 0.5 && kp2?.score > 0.5) {
         ctx.beginPath();
         ctx.moveTo(kp1.x, kp1.y);
         ctx.lineTo(kp2.x, kp2.y);
-        ctx.strokeStyle = 'lime';
+        ctx.strokeStyle = "lime";
         ctx.lineWidth = 2;
         ctx.stroke();
       }
@@ -236,8 +363,13 @@ const ExerciseCamera = () => {
       {modelType === 'blazepose' && keypoints3D && (
         <FeedbackEngine
           keypoints3D={keypoints3D}
-          modelType={modelType}
-          onFeedback={setLiveFeedback}
+          modelType="blazepose"
+          exerciseType={exerciseType}
+          frames={frames}
+          onFeedback={(feedback) => {
+            setLiveFeedback(feedback);
+            setFeedbackRendered(true); // Feedback is rendered, set the flag
+          }}
         />
       )}
 
