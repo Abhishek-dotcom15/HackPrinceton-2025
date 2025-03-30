@@ -1,6 +1,6 @@
 import axios from "axios";
 // Access the environment variable
-const GROQ_API_KEY = "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";
+const GROQ_API_KEY = process.env.REACT_APP_GROQ_API_KEY;
 
 export async function getGroqFeedback(prompt) {
   try {
@@ -12,7 +12,7 @@ export async function getGroqFeedback(prompt) {
           {
             role: "system",
             content:
-              "You are a physiotherapy expert giving real-time squat form feedback.",
+              "You are a physiotherapy expert giving real-time exercise form feedback.",
           },
           {
             role: "user",
