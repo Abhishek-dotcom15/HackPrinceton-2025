@@ -1178,21 +1178,21 @@ const App = () => {
       Ensure that the hips are square and aligned during the lunge.
       If the knee extends too far past the toes, correct form.
     `;
-    } else if (exerciseType === "leg raise") {
+    } else if (exerciseType === "legRaise") {
       prompt = `
       A user is performing a leg raise. The hip angle is ${leftHipStart.z.toFixed(
         1
       )} for the left leg and ${rightHipStart.z.toFixed(1)} for the right leg.
       Ensure the leg is not too low or too high, keep it controlled during the movement.
     `;
-    } else if (exerciseType === "leg extension") {
+    } else if (exerciseType === "legExtension") {
       prompt = `
       A user is performing a leg extension. The knee angle is:
       - Left Knee: ${leftKneeAngleStart.toFixed(1)}°
       - Right Knee: ${rightKneeAngleStart.toFixed(1)}°
       Keep the knee fully extended and control the movement.
     `;
-    } else if (exerciseType === "hamstring curl") {
+    } else if (exerciseType === "hamstringCurl") {
       prompt = `
       A user is performing a hamstring curl. The knee angle is:
       - Left Knee: ${leftKneeAngleStart.toFixed(1)}°
