@@ -7,18 +7,37 @@ function LandingPage() {
   const { loginWithRedirect, logout, isAuthenticated, user } = useAuth0();
   const navigate = useNavigate();
 
+  const [isMobile, setIsMobile] = React.useState(window.innerWidth < 768);
+
   React.useEffect(() => {
     if (isAuthenticated) {
       navigate('/exercises');
     }
+
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, [isAuthenticated, navigate]);
+
+  const sharedSectionStyle = {
+    flex: 1,
+    textAlign: isMobile ? 'center' : 'left',
+    padding: isMobile ? '0' : '0 40px',
+  };
 
   return (
     <div style={styles.page}>
       <div style={styles.overlay}>
         {!isAuthenticated ? (
-          <div style={styles.landing}>
-            <div style={styles.leftSection}>
+          <div
+            style={{
+              ...styles.landing,
+              flexDirection: isMobile ? 'column' : 'row',
+              gap: isMobile ? '40px' : '0',
+              textAlign: isMobile ? 'center' : 'left',
+            }}
+          >
+            <div style={sharedSectionStyle}>
               <h1 style={styles.title}>🧘‍♀️ MoveMend</h1>
               <p style={styles.text}>
                 Welcome to <strong>MoveMend</strong> – your AI-powered physiotherapy companion.
@@ -32,8 +51,15 @@ function LandingPage() {
                 <li>🧠 Follow on-screen pose corrections</li>
               </ol>
             </div>
-            <div style={styles.rightSection}>
-              <h2>Log In to Get Started</h2>
+
+            <div
+              style={{
+                ...sharedSectionStyle,
+                borderLeft: isMobile ? 'none' : '2px solid rgba(255,255,255,0.2)',
+                paddingLeft: isMobile ? 0 : '40px',
+              }}
+            >
+              <h2 style={{ marginBottom: '1.5rem' }}>Log In to Get Started</h2>
               <button style={styles.button} onClick={loginWithRedirect}>
                 Log In
               </button>
@@ -60,7 +86,7 @@ function LandingPage() {
 
 const styles = {
   page: {
-    fontFamily: "'Poppins', sans-serif", // 👈 Add this line
+    fontFamily: "'Poppins', sans-serif",
     minHeight: '100vh',
     backgroundImage: 'url(/image2.avif)',
     backgroundSize: 'cover',
@@ -69,11 +95,10 @@ const styles = {
     position: 'relative',
   },
   overlay: {
-    fontFamily: "'Poppins', sans-serif", // Optional
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    backdropFilter: 'blur(5px)', // ✨ Added blur here
+    backdropFilter: 'blur(5px)',
     minHeight: '100vh',
-    padding: '40px',
+    padding: '40px 20px',
     color: 'white',
     display: 'flex',
     alignItems: 'center',
@@ -81,26 +106,13 @@ const styles = {
   },
   landing: {
     display: 'flex',
-    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     maxWidth: '1200px',
-    margin: '0 auto',
     width: '100%',
   },
-  leftSection: {
-    flex: 1,
-    textAlign: 'left',
-    paddingRight: '40px',
-  },
-  rightSection: {
-    flex: 1,
-    textAlign: 'center',
-    borderLeft: '2px solid rgba(255,255,255,0.2)',
-    paddingLeft: '40px',
-  },
   title: {
-    fontSize: '3rem',
+    fontSize: '2.5rem',
     marginBottom: '20px',
     fontWeight: '800',
     color: 'white',
@@ -111,17 +123,19 @@ const styles = {
     color: '#fdd835',
   },
   text: {
-    fontSize: '1.2rem',
+    fontSize: '1.1rem',
     lineHeight: '1.6',
     maxWidth: '600px',
     color: '#f0f0f0',
+    margin: '0 auto',
   },
   list: {
     marginTop: '1rem',
     lineHeight: '2rem',
     paddingLeft: '1.5rem',
-    fontSize: '1.1rem',
+    fontSize: '1.05rem',
     color: '#e0e0e0',
+    textAlign: 'left',
   },
   button: {
     marginTop: '2rem',
