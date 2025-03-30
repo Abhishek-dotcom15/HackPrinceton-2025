@@ -68,12 +68,12 @@ const App = () => {
   const lastFeedbackTimeRef = useRef(Date.now());
   const frameQueueRef = useRef([]); // Queue to store frames (keypoints3D and timestamp)
 
-  const resetFramesAndCooldown = () => {
-    frameQueueRef.current = []; // Clear frame queue
-    setFrames([]); // Clear state frames
-    setCooldownTime(0); // Reset cooldown time
-    lastFeedbackTimeRef.current = Date.now(); // Reset feedback time
-  };
+  // const resetFramesAndCooldown = () => {
+  //   frameQueueRef.current = []; // Clear frame queue
+  //   setFrames([]); // Clear state frames
+  //   setCooldownTime(0); // Reset cooldown time
+  //   lastFeedbackTimeRef.current = Date.now(); // Reset feedback time
+  // };
 
   useEffect(() => {
     const interval = setInterval(() => {
