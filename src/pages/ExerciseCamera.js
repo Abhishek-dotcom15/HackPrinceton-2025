@@ -306,13 +306,6 @@ const ExerciseCamera = () => {
       <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
         <button
           style={{ marginRight: "1rem" }}
-          onClick={() => setModelType("movenet")}
-          disabled={modelType === "movenet"}
-        >
-          Use MoveNet
-        </button>
-        <button
-          style={{ marginRight: "1rem" }}
           onClick={() => setModelType("blazepose")}
           disabled={modelType === "blazepose"}
         >
