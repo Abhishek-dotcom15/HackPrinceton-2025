@@ -18,7 +18,7 @@ const ExerciseCamera = () => {
   const [backendReady, setBackendReady] = useState(false);
   const [modelType, setModelType] = useState("blazepose");
   const [keypoints3D, setKeypoints3D] = useState(null);
-  const [darkMode, setDarkMode] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
   const [liveFeedback, setLiveFeedback] = useState("");
   const [error, setError] = useState(null);
   // const [activeTab, setActiveTab] = useState('keypoints');
@@ -273,141 +273,339 @@ const ExerciseCamera = () => {
     });
   };
 
+  // return (
+  //   <div
+  //     style={{
+  //       backgroundColor: darkMode ? "#121212" : "#f5f5f5",
+  //       color: darkMode ? "#f5f5f5" : "#121212",
+  //       minHeight: "100vh",
+  //       padding: "2rem",
+  //       fontFamily: "sans-serif",
+  //     }}
+  //   >
+  //     {/* BACK BUTTON */}
+  //     <button
+  //       onClick={() => navigate("/exercises")}
+  //       style={{
+  //         marginBottom: "1rem",
+  //         padding: "8px 16px",
+  //         backgroundColor: "#444",
+  //         color: "white",
+  //         border: "none",
+  //         borderRadius: "6px",
+  //         cursor: "pointer",
+  //       }}
+  //     >
+  //       ← Back to Exercises
+  //     </button>
+
+  //     <h2 style={{ textAlign: "center", marginBottom: "1rem" }}>
+  //       Real-Time Pose Detection
+  //     </h2>
+
+  //     <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+  //       <button
+  //         style={{ marginRight: "1rem" }}
+  //         onClick={() => setModelType("blazepose")}
+  //         disabled={modelType === "blazepose"}
+  //       >
+  //         Use BlazePose
+  //       </button>
+  //       <button onClick={() => setDarkMode((prev) => !prev)}>
+  //         Toggle {darkMode ? "Light" : "Dark"} Mode
+  //       </button>
+  //     </div>
+
+  //     <div
+  //       style={{
+  //         display: "flex",
+  //         flexWrap: "wrap",
+  //         justifyContent: "center",
+  //         gap: "2rem",
+  //       }}
+  //     >
+  //       <div style={{ width: 640, height: 480, position: "relative" }}>
+  //         <Webcam
+  //           ref={webcamRef}
+  //           style={{
+  //             width: "100%",
+  //             height: "100%",
+  //             objectFit: "cover",
+  //             borderRadius: "12px",
+  //           }}
+  //           videoConstraints={{ width: 640, height: 480, facingMode: "user" }}
+  //         />
+  //         <canvas
+  //           ref={canvasRef}
+  //           style={{
+  //             position: "absolute",
+  //             top: 0,
+  //             left: 0,
+  //             width: "100%",
+  //             height: "100%",
+  //             pointerEvents: "none",
+  //             borderRadius: "12px",
+  //           }}
+  //         />
+  //       </div>
+
+  //       {modelType === "blazepose" && keypoints3D && (
+  //         <div style={{ width: 640, height: 480 }}>
+  //           <Pose3DViewer keypoints3D={keypoints3D} darkMode={darkMode} />
+  //         </div>
+  //       )}
+  //     </div>
+
+  //     {modelType === "blazepose" && keypoints3D && (
+  //       <FeedbackEngine
+  //         keypoints3D={keypoints3D}
+  //         modelType="blazepose"
+  //         exerciseType={exerciseType}
+  //         frames={frames}
+  //         onFeedback={(feedback) => {
+  //           setLiveFeedback(feedback);
+  //           speakText(feedback);
+  //           setFeedbackRendered(true); // Feedback is rendered, set the flag
+  //         }}
+  //       />
+  //     )}
+
+  //     {liveFeedback && (
+  //       <div
+  //         style={{
+  //           marginTop: "1.5rem",
+  //           padding: "1rem",
+  //           backgroundColor: darkMode ? "#1e1e1e" : "#fff",
+  //           color: darkMode ? "#fff" : "#000",
+  //           borderRadius: "8px",
+  //           boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
+  //           maxWidth: "80%",
+  //           marginLeft: "auto",
+  //           marginRight: "auto",
+  //           textAlign: "center",
+  //         }}
+  //       >
+  //         <strong></strong> {liveFeedback}
+  //       </div>
+  //     )}
+
+  //     {noPerson && (
+  //       <div
+  //         style={{
+  //           position: "absolute",
+  //           top: 20,
+  //           left: 20,
+  //           backgroundColor: "rgba(0, 0, 0, 0.7)",
+  //           padding: "10px 16px",
+  //           color: "white",
+  //           borderRadius: "8px",
+  //           fontWeight: "bold",
+  //           zIndex: 10,
+  //         }}
+  //       >
+  //         No person detected
+  //       </div>
+  //     )}
+  //   </div>
+  // );
   return (
-    <div
+  <div
+    style={{
+      backgroundColor: darkMode ? "#121212" : "#f5f5f5",
+      color: darkMode ? "#f5f5f5" : "#121212",
+      minHeight: "100vh",
+      padding: "2rem 1rem",
+      fontFamily: "'Poppins', sans-serif",
+    }}
+  >
+    {/* Back Button */}
+    <button
+      onClick={() => navigate("/exercises")}
       style={{
-        backgroundColor: darkMode ? "#121212" : "#f5f5f5",
-        color: darkMode ? "#f5f5f5" : "#121212",
-        minHeight: "100vh",
-        padding: "2rem",
-        fontFamily: "sans-serif",
+        marginBottom: "1.5rem",
+        padding: "10px 18px",
+        backgroundColor: "#333",
+        color: "#fff",
+        border: "none",
+        borderRadius: "8px",
+        cursor: "pointer",
+        fontSize: "0.9rem",
+        fontWeight: 500,
       }}
     >
-      {/* BACK BUTTON */}
+      ← Back to Exercises
+    </button>
+
+    {/* Header */}
+    <h2
+      style={{
+        textAlign: "center",
+        fontSize: "2rem",
+        fontWeight: "700",
+        marginBottom: "1rem",
+      }}
+    >
+      Real-Time Pose Detection
+    </h2>
+
+    {/* Mode Toggle */}
+    <div style={{ textAlign: "center", marginBottom: "2rem" }}>
       <button
-        onClick={() => navigate("/exercises")}
         style={{
-          marginBottom: "1rem",
-          padding: "8px 16px",
-          backgroundColor: "#444",
-          color: "white",
+          marginRight: "1rem",
+          padding: "10px 16px",
+          backgroundColor: "#888",
+          color: "#fff",
           border: "none",
-          borderRadius: "6px",
-          cursor: "pointer",
+          borderRadius: "8px",
+          cursor: modelType === "blazepose" ? "not-allowed" : "pointer",
+          opacity: modelType === "blazepose" ? 0.6 : 1,
         }}
+        onClick={() => setModelType("blazepose")}
+        disabled={modelType === "blazepose"}
       >
-        ← Back to Exercises
+        Use BlazePose
       </button>
+      <button
+  onClick={() => setDarkMode((prev) => !prev)}
+  style={{
+    padding: "6px 12px",
+    backgroundColor: darkMode ? "#444" : "#f1c40f",
+    color: darkMode ? "#fff" : "#000",
+    borderRadius: "20px",
+    cursor: "pointer",
+    border: "none",
+    fontWeight: "bold",
+  }}
+>
+  {darkMode ? "☀ Light Mode" : "🌙 Dark Mode"}
+</button>
 
-      <h2 style={{ textAlign: "center", marginBottom: "1rem" }}>
-        Real-Time Pose Detection
-      </h2>
+    </div>
 
-      <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
-        <button
-          style={{ marginRight: "1rem" }}
-          onClick={() => setModelType("blazepose")}
-          disabled={modelType === "blazepose"}
-        >
-          Use BlazePose
-        </button>
-        <button onClick={() => setDarkMode((prev) => !prev)}>
-          Toggle {darkMode ? "Light" : "Dark"} Mode
-        </button>
-      </div>
-
+    {/* Webcam + 3D View */}
+    <div
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        justifyContent: "center",
+        gap: "2rem",
+        marginBottom: "2rem",
+      }}
+    >
       <div
         style={{
-          display: "flex",
-          flexWrap: "wrap",
-          justifyContent: "center",
-          gap: "2rem",
+          width: 640,
+          height: 480,
+          position: "relative",
+          borderRadius: "12px",
+          overflow: "hidden",
+          boxShadow: "0 6px 20px rgba(0,0,0,0.3)",
         }}
       >
-        <div style={{ width: 640, height: 480, position: "relative" }}>
-          <Webcam
-            ref={webcamRef}
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              borderRadius: "12px",
-            }}
-            videoConstraints={{ width: 640, height: 480, facingMode: "user" }}
-          />
-          <canvas
-            ref={canvasRef}
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              width: "100%",
-              height: "100%",
-              pointerEvents: "none",
-              borderRadius: "12px",
-            }}
-          />
-        </div>
-
-        {modelType === "blazepose" && keypoints3D && (
-          <div style={{ width: 640, height: 480 }}>
-            <Pose3DViewer keypoints3D={keypoints3D} darkMode={darkMode} />
-          </div>
-        )}
+        <Webcam
+          ref={webcamRef}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+          }}
+          videoConstraints={{ width: 640, height: 480, facingMode: "user" }}
+        />
+        <canvas
+          ref={canvasRef}
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            pointerEvents: "none",
+          }}
+        />
       </div>
 
       {modelType === "blazepose" && keypoints3D && (
-        <FeedbackEngine
-          keypoints3D={keypoints3D}
-          modelType="blazepose"
-          exerciseType={exerciseType}
-          frames={frames}
-          onFeedback={(feedback) => {
-            setLiveFeedback(feedback);
-            speakText(feedback);
-            setFeedbackRendered(true); // Feedback is rendered, set the flag
-          }}
-        />
-      )}
-
-      {liveFeedback && (
         <div
           style={{
-            marginTop: "1.5rem",
-            padding: "1rem",
+            width: 640,
+            height: 480,
             backgroundColor: darkMode ? "#1e1e1e" : "#fff",
-            color: darkMode ? "#fff" : "#000",
-            borderRadius: "8px",
-            boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
-            maxWidth: "80%",
-            marginLeft: "auto",
-            marginRight: "auto",
-            textAlign: "center",
+            borderRadius: "12px",
+            overflow: "hidden",
+            boxShadow: "0 6px 20px rgba(0,0,0,0.3)",
           }}
         >
-          <strong></strong> {liveFeedback}
-        </div>
-      )}
-
-      {noPerson && (
-        <div
-          style={{
-            position: "absolute",
-            top: 20,
-            left: 20,
-            backgroundColor: "rgba(0, 0, 0, 0.7)",
-            padding: "10px 16px",
-            color: "white",
-            borderRadius: "8px",
-            fontWeight: "bold",
-            zIndex: 10,
-          }}
-        >
-          No person detected
+          <Pose3DViewer keypoints3D={keypoints3D} darkMode={darkMode} />
         </div>
       )}
     </div>
-  );
+
+    {/* Cooldown Timer */}
+    {cooldownTime > 0 && (
+      <div style={{ textAlign: "center", fontSize: "1.1rem", marginBottom: "1rem" }}>
+        ⏳ Next feedback in <span style={{ color: "orange" }}>{cooldownTime}</span> seconds
+      </div>
+    )}
+
+    {/* Feedback */}
+    {modelType === "blazepose" && keypoints3D && (
+      <FeedbackEngine
+        keypoints3D={keypoints3D}
+        modelType="blazepose"
+        exerciseType={exerciseType}
+        frames={frames}
+        onFeedback={(feedback) => {
+          setLiveFeedback(feedback);
+          speakText(feedback);
+          setFeedbackRendered(true);
+        }}
+      />
+    )}
+
+    {liveFeedback && (
+      <div
+        style={{
+          marginTop: "1rem",
+          padding: "1rem 1.5rem",
+          backgroundColor: darkMode ? "#1e1e1e" : "#fff",
+          color: darkMode ? "#fff" : "#000",
+          borderRadius: "10px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
+          maxWidth: "85%",
+          marginLeft: "auto",
+          marginRight: "auto",
+          textAlign: "center",
+          fontSize: "1rem",
+          lineHeight: "1.6",
+        }}
+      >
+        {liveFeedback}
+      </div>
+    )}
+
+    {/* No Person Alert */}
+    {noPerson && (
+      <div
+        style={{
+          position: "fixed",
+          top: 20,
+          left: 20,
+          backgroundColor: "rgba(0, 0, 0, 0.75)",
+          padding: "12px 20px",
+          color: "white",
+          borderRadius: "8px",
+          fontWeight: "600",
+          fontSize: "0.95rem",
+          zIndex: 999,
+        }}
+      >
+        ⚠️ No person detected
+      </div>
+    )}
+  </div>
+);
+
 };
 
 export default ExerciseCamera;

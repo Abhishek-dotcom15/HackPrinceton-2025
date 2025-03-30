@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { Auth0Provider } from '@auth0/auth0-react';
 import App from './App';
-// import './index.css';
+import './index.css';
 import reportWebVitals from './reportWebVitals';
 
 const domain = "dev-iro16na5h1r0bxxi.us.auth0.com";
