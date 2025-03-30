@@ -5,15 +5,17 @@ import '@tensorflow/tfjs-backend-webgl';
 import '@tensorflow/tfjs-backend-cpu';
 import * as poseDetection from '@tensorflow-models/pose-detection';
 import Pose3DViewer from '../components/Pose3DViewer';
+import FeedbackEngine from '../components/FeedbackEngine';
 
 const ExerciseCamera = () => {
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
   const [noPerson, setNoPerson] = useState(false);
   const [backendReady, setBackendReady] = useState(false);
-  const [modelType, setModelType] = useState('blazepose'); // Default to BlazePose
+  const [modelType, setModelType] = useState('blazepose');
   const [keypoints3D, setKeypoints3D] = useState(null);
   const [darkMode, setDarkMode] = useState(true);
+  const [liveFeedback, setLiveFeedback] = useState('');
 
   // Setup backend
   useEffect(() => {
@@ -84,6 +86,7 @@ const ExerciseCamera = () => {
               drawSkeleton(keypoints, ctx, modelType);
             } else {
               setNoPerson(true);
+              setKeypoints3D(null);
             }
           } catch (err) {
             console.error('Pose estimation error:', err);
@@ -144,7 +147,7 @@ const ExerciseCamera = () => {
         color: darkMode ? '#f5f5f5' : '#121212',
         minHeight: '100vh',
         padding: '2rem',
-        fontFamily: 'sans-serif'
+        fontFamily: 'sans-serif',
       }}
     >
       <h2 style={{ textAlign: 'center', marginBottom: '1rem' }}>
@@ -176,7 +179,7 @@ const ExerciseCamera = () => {
           display: 'flex',
           flexWrap: 'wrap',
           justifyContent: 'center',
-          gap: '2rem'
+          gap: '2rem',
         }}
       >
         <div style={{ width: 640, height: 480, position: 'relative' }}>
@@ -186,7 +189,7 @@ const ExerciseCamera = () => {
               width: '100%',
               height: '100%',
               objectFit: 'cover',
-              borderRadius: '12px'
+              borderRadius: '12px',
             }}
             videoConstraints={{ width: 640, height: 480, facingMode: 'user' }}
           />
@@ -199,7 +202,7 @@ const ExerciseCamera = () => {
               width: '100%',
               height: '100%',
               pointerEvents: 'none',
-              borderRadius: '12px'
+              borderRadius: '12px',
             }}
           />
         </div>
@@ -210,6 +213,33 @@ const ExerciseCamera = () => {
           </div>
         )}
       </div>
+
+      {modelType === 'blazepose' && keypoints3D && (
+        <FeedbackEngine
+          keypoints3D={keypoints3D}
+          modelType={modelType}
+          onFeedback={setLiveFeedback}
+        />
+      )}
+
+      {liveFeedback && (
+        <div
+          style={{
+            marginTop: '1.5rem',
+            padding: '1rem',
+            backgroundColor: darkMode ? '#1e1e1e' : '#fff',
+            color: darkMode ? '#fff' : '#000',
+            borderRadius: '8px',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+            maxWidth: '80%',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+            textAlign: 'center',
+          }}
+        >
+          <strong>Feedback:</strong> {liveFeedback}
+        </div>
+      )}
 
       {noPerson && (
         <div
@@ -222,7 +252,7 @@ const ExerciseCamera = () => {
             color: 'white',
             borderRadius: '8px',
             fontWeight: 'bold',
-            zIndex: 10
+            zIndex: 10,
           }}
         >
           No person detected
