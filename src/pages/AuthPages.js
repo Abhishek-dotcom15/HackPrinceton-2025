@@ -6,7 +6,7 @@ export default function AuthPages() {
 
   return (
     <div style={{ textAlign: 'center', padding: '40px' }}>
-      <h1>Welcome to PhysioPose</h1>
+      <h1>Welcome to MoveMend</h1>
       {!isAuthenticated ? (
         <button onClick={() => loginWithRedirect()} style={styles.button}>
           Log In

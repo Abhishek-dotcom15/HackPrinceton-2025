@@ -10,9 +10,6 @@ MoveMend is a real-time pose detection web application built using TensorFlow.js
 - **Dynamic Exercise Type**: The exercise type (e.g., Squat, Lunge) is dynamically passed through the URL.
 - **Model Switching**: Option to switch between BlazePose and MoveNet models for pose estimation.
 - **Speech Audio Feedback**: Provides real-time audio feedback, delivering verbal cues to improve exercise performance.
-
-## Technologies Used
-- **Groq Integration**: Generates real-time feedback using the Groq API for physiotherapy-style advice based on detected poses.
   
 ## Technologies Used
 
