@@ -446,4 +446,17 @@ body {
   .segmentation-shortcuts {
     display: none;
   }
+  .exercise-selector {
+    margin-bottom: 20px;
+    font-size: 16px;
+  }
+
+  .exercise-selector select {
+    padding: 5px;
+    font-size: 16px;
+  }
+
+  .exercise-selector label {
+    margin-right: 10px;
+  }
 }
