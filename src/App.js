@@ -929,6 +929,8 @@ const App = () => {
   const [cooldownTime, setCooldownTime] = useState(0);
   const [exerciseType, setExerciseType] = useState("squat"); // Default to "squat"
   const [frames, setFrames] = useState([]); // Store frames for feedback calculation
+  const lastFeedbackTimeRef = useRef(Date.now());
+
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -1023,9 +1025,9 @@ const App = () => {
             requestAnimationFrame(detectPose);
             return;
           }
-
+        
           lastFrameTime = timestamp;
-
+        
           if (
             webcamRef.current &&
             webcamRef.current.video &&
@@ -1037,38 +1039,39 @@ const App = () => {
               const poses = await detector.estimatePoses(video);
               const ctx = canvasRef.current.getContext("2d");
               if (!ctx) return requestAnimationFrame(detectPose);
-
+        
               canvasRef.current.width = video.videoWidth;
               canvasRef.current.height = video.videoHeight;
               ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-
+        
               const keypoints = poses?.[0]?.keypoints;
-              // const keypoints3D = poses?.[0]?.keypoints3D;
-
-              // Only proceed if keypoints are found
+              const keypoints3D = poses?.[0]?.keypoints3D;
+        
               if (keypoints && keypoints.length > 0) {
-                // Store keypoints for every frame
-                setFrames((prevFrames) => {
-                  const newFrames = [...prevFrames, { keypoints, timestamp }];
-                  return newFrames.filter(
-                    (frame) => timestamp - frame.timestamp < 10000
-                  ); // Keep only frames from the last 10 seconds
-                });
-
-                // After 10 seconds, provide feedback
-                if (frames.length >= 10) {
-                  const feedbackPrompt = generateFeedbackPrompt(
-                    exerciseType,
-                    frames
-                  );
-                  const feedback = await getGroqFeedback(feedbackPrompt);
-                  setLiveFeedback(feedback);
-                  setCooldownTime(10); // Cooldown of 10 seconds
-                  setFrames([]); // Reset frames after feedback
-                }
-
+                setNoPerson(false);
+        
                 drawKeypoints(keypoints, ctx);
                 drawSkeleton(keypoints, ctx);
+        
+                // Add this frame to local frames array
+                setFrames((prevFrames) => {
+                  const newFrames = [...prevFrames, { keypoints3D, timestamp }];
+                  return newFrames.filter((frame) => timestamp - frame.timestamp < 10000); // Keep only last 10 sec
+                });
+        
+                // Handle feedback timing using a cooldown ref
+                const now = Date.now();
+                const secondsSinceLast = (now - lastFeedbackTimeRef.current) / 1000;
+        
+                if (secondsSinceLast >= 15 && keypoints3D && frames.length >= 10) {
+                  lastFeedbackTimeRef.current = now;
+                  setCooldownTime(15);
+        
+                  const prompt = generateFeedbackPrompt(exerciseType, frames);
+                  const feedback = await getGroqFeedback(prompt);
+                  setLiveFeedback(feedback);
+                  setFrames([]); // reset after feedback
+                }
               } else {
                 setNoPerson(true);
               }
@@ -1076,9 +1079,10 @@ const App = () => {
               console.error("Pose estimation error:", error);
             }
           }
-
+        
           requestAnimationFrame(detectPose);
         };
+        
 
         requestAnimationFrame(detectPose);
         return () => detector?.dispose?.();
@@ -1097,7 +1101,8 @@ const App = () => {
         cleanupFn();
       }
     };
-  }, [backendReady, activeTab, frames, exerciseType]);
+  }, [backendReady, activeTab, exerciseType]);
+  // }, [backendReady, activeTab, frames, exerciseType]);
 
   // Feedback Generation Based on Exercise Type
   const generateFeedbackPrompt = (exerciseType, frames) => {
@@ -1345,11 +1350,6 @@ const App = () => {
               {liveFeedback && (
                 <div className="live-feedback status-message info-message">
                   <strong>Feedback:</strong> {liveFeedback}
-                </div>
-              )}
-              {cooldownTime > 0 && (
-                <div className="status-message info-message">
-                  Next feedback in: {cooldownTime}s
                 </div>
               )}
               {cooldownTime > 0 && (
