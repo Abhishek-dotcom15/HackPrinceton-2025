@@ -18,9 +18,9 @@ function LandingPage() {
       {!isAuthenticated ? (
         <div style={styles.landing}>
           <div style={styles.leftSection}>
-            <h1 style={styles.title}>🧘‍♀️ PhysioPose</h1>
+            <h1 style={styles.title}>🧘‍♀️ MoveMend</h1>
             <p style={styles.text}>
-              Welcome to PhysioPose – your AI-powered physiotherapy companion. We use advanced pose estimation to help you recover with better form and real-time feedback!
+              Welcome to MoveMend – your AI-powered physiotherapy companion. We use advanced pose estimation to help you recover with better form and real-time feedback!
             </p>
             <h2>How it Works</h2>
             <ol>
