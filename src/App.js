@@ -11,6 +11,7 @@ import "./App.css";
 import { calculateAngle3D } from "./utils/angles";
 import { getGroqFeedback } from "./utils/groq";
 
+
 // --- moved outside component to prevent eslint warnings ---
 const drawKeypoints = (keypoints, ctx) => {
   if (!ctx || !keypoints) return;
@@ -65,7 +66,14 @@ const App = () => {
   const [exerciseType, setExerciseType] = useState("squat"); // Default to "squat"
   const [frames, setFrames] = useState([]); // Store frames for feedback calculation
   const lastFeedbackTimeRef = useRef(Date.now());
+  const frameQueueRef = useRef([]); // Queue to store frames (keypoints3D and timestamp)
 
+  const resetFramesAndCooldown = () => {
+    frameQueueRef.current = []; // Clear frame queue
+    setFrames([]); // Clear state frames
+    setCooldownTime(0); // Reset cooldown time
+    lastFeedbackTimeRef.current = Date.now(); // Reset feedback time
+  };
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -188,24 +196,32 @@ const App = () => {
                 drawKeypoints(keypoints, ctx);
                 drawSkeleton(keypoints, ctx);
         
-                // Add this frame to local frames array
-                setFrames((prevFrames) => {
-                  const newFrames = [...prevFrames, { keypoints3D, timestamp }];
-                  return newFrames.filter((frame) => timestamp - frame.timestamp < 10000); // Keep only last 10 sec
-                });
+                // Add the new frame to the queue
+                const newFrame = { keypoints3D, timestamp };
+                frameQueueRef.current.push(newFrame);
+
+                // Remove frames older than 10 seconds
+                while (frameQueueRef.current.length > 0 && timestamp - frameQueueRef.current[0].timestamp > 10000) {
+                  frameQueueRef.current.shift();
+                }
+
+                // Update the state with the latest frames
+                setFrames([...frameQueueRef.current]);
         
-                // Handle feedback timing using a cooldown ref
+                // Handle feedback every 15 seconds if there are at least 10 frames
                 const now = Date.now();
                 const secondsSinceLast = (now - lastFeedbackTimeRef.current) / 1000;
         
                 if (secondsSinceLast >= 15 && keypoints3D && frames.length >= 10) {
                   lastFeedbackTimeRef.current = now;
                   setCooldownTime(15);
-        
+
                   const prompt = generateFeedbackPrompt(exerciseType, frames);
                   const feedback = await getGroqFeedback(prompt);
                   setLiveFeedback(feedback);
-                  setFrames([]); // reset after feedback
+
+                  // Reset the frames after feedback
+                  setFrames([]);
                 }
               } else {
                 setNoPerson(true);
@@ -287,54 +303,52 @@ const App = () => {
     let prompt = "";
     if (exerciseType === "squat") {
       prompt = `
-      A user is performing a squat. The knee angles at the start and end of the movement are:
-      - Left Knee (Start): ${leftKneeAngleStart.toFixed(1)}°
-      - Right Knee (Start): ${rightKneeAngleStart.toFixed(1)}°
-      - Left Knee (End): ${leftKneeAngleEnd.toFixed(1)}°
-      - Right Knee (End): ${rightKneeAngleEnd.toFixed(1)}°
-      The left hip at the start is at position ${leftHipStart.z.toFixed(
-        1
-      )} and at the end is at position ${leftHipEnd.z.toFixed(1)}.
-      The right hip at the start is at position ${rightHipStart.z.toFixed(
-        1
-      )} and at the end is at position ${rightHipEnd.z.toFixed(1)}.
-
-      Provide corrective feedback on the squatting form based on these angles.
-      If knees are > 150°, too upright. If < 90°, too deep.
-      If hips are not aligned, adjust posture.
-    `;
+        A user is performing a squat:
+        - Left Knee (Start): ${leftKneeAngleStart.toFixed(1)}°
+        - Right Knee (Start): ${rightKneeAngleStart.toFixed(1)}°
+        - Left Knee (End): ${leftKneeAngleEnd.toFixed(1)}°
+        - Right Knee (End): ${rightKneeAngleEnd.toFixed(1)}°
+        - Left Hip Z: ${leftHipStart.z.toFixed(1)} → ${leftHipEnd.z.toFixed(1)}
+        - Right Hip Z: ${rightHipStart.z.toFixed(1)} → ${rightHipEnd.z.toFixed(1)}
+    
+        Give 2–3 short physiotherapist-style cues.
+      `;
     } else if (exerciseType === "lunge") {
       prompt = `
-      A user is performing a lunge. The knee angles are:
-      - Left Knee (Start): ${leftKneeAngleStart.toFixed(1)}°
-      - Right Knee (Start): ${rightKneeAngleStart.toFixed(1)}°
-      - Left Knee (End): ${leftKneeAngleEnd.toFixed(1)}°
-      - Right Knee (End): ${rightKneeAngleEnd.toFixed(1)}°
-      Ensure that the hips are square and aligned during the lunge.
-      If the knee extends too far past the toes, correct form.
-    `;
+        A user is performing a lunge:
+        - Left Knee (Start): ${leftKneeAngleStart.toFixed(1)}°
+        - Right Knee (Start): ${rightKneeAngleStart.toFixed(1)}°
+        - Left Knee (End): ${leftKneeAngleEnd.toFixed(1)}°
+        - Right Knee (End): ${rightKneeAngleEnd.toFixed(1)}°
+    
+        Give 2–3 short physiotherapist-style corrections.
+      `;
     } else if (exerciseType === "legRaise") {
       prompt = `
-      A user is performing a leg raise. The hip angle is ${leftHipStart.z.toFixed(
-        1
-      )} for the left leg and ${rightHipStart.z.toFixed(1)} for the right leg.
-      Ensure the leg is not too low or too high, keep it controlled during the movement.
-    `;
+        A user is performing a leg raise:
+        - Left Hip Z: ${leftHipStart.z.toFixed(1)}
+        - Right Hip Z: ${rightHipStart.z.toFixed(1)}
+    
+        Give 2–3 brief physiotherapy-style form cues.
+      `;
     } else if (exerciseType === "legExtension") {
       prompt = `
-      A user is performing a leg extension. The knee angle is:
-      - Left Knee: ${leftKneeAngleStart.toFixed(1)}°
-      - Right Knee: ${rightKneeAngleStart.toFixed(1)}°
-      Keep the knee fully extended and control the movement.
-    `;
+        A user is doing a leg extension:
+        - Left Knee: ${leftKneeAngleStart.toFixed(1)}°
+        - Right Knee: ${rightKneeAngleStart.toFixed(1)}°
+    
+        Provide 2–3 short corrections on form.
+      `;
     } else if (exerciseType === "hamstringCurl") {
       prompt = `
-      A user is performing a hamstring curl. The knee angle is:
-      - Left Knee: ${leftKneeAngleStart.toFixed(1)}°
-      - Right Knee: ${rightKneeAngleStart.toFixed(1)}°
-      Ensure that the knee is not hyperextending during the curl.
-    `;
+        A user is performing a hamstring curl:
+        - Left Knee: ${leftKneeAngleStart.toFixed(1)}°
+        - Right Knee: ${rightKneeAngleStart.toFixed(1)}°
+    
+        Give 2–3 short physiotherapist-style corrections.
+      `;
     }
+    
 
     return prompt;
   };
@@ -460,7 +474,12 @@ const App = () => {
               2D Keypoint Detection
               <div className="exercise-selector">
                 <select
-                  onChange={(e) => setExerciseType(e.target.value)}
+                  
+                  onChange={(e) => {
+                    setExerciseType(e.target.value);
+                    // resetFramesAndCooldown(); // Reset when exercise type changes
+                  }}
+
                   value={exerciseType}
                 >
                   <option value="squat">Squat</option>
