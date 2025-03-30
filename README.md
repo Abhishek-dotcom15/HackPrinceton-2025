@@ -35,7 +35,9 @@ MoveMend is a real-time pose detection web application built using TensorFlow.js
    cd HackPrinceton-2025
    npm install
    npm start
-2. Open your browser and navigate to http://localhost:3000 to view the application. 
+2. Create a .env file in the root directory and add your GROQ API key
+
+3. Open your browser and navigate to http://localhost:3000 to view the application. 
 
 ## Backend (Optional)
 
